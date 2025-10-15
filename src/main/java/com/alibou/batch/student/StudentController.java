@@ -1,27 +1,33 @@
 package com.alibou.batch.student;
 
+import com.alibou.batch.config.CustomSchedulerProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.JobParametersInvalidException;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.launch.*;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.context.refresh.ContextRefresher;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Set;
 
 @RestController
 @RequestMapping("/students")
 @RequiredArgsConstructor
 public class StudentController {
-
     private final JobLauncher jobLauncher;
+    private final JobOperator jobOperator;
+    @Qualifier("configDataContextRefresher")
+    private final ContextRefresher contextRefresher;
     private final Job job;
+    private final CustomSchedulerProcessor customSchedulerProcessor;
 
-    @PostMapping
+    @PostMapping("/start")
     public void importCsvToDBJob() {
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("startAt", System.currentTimeMillis())
@@ -35,4 +41,24 @@ public class StudentController {
             e.printStackTrace();
         }
     }
+
+    @PostMapping("/restart/{execId}")
+    public void restart(@PathVariable Long execId) throws JobInstanceAlreadyCompleteException, NoSuchJobException, NoSuchJobExecutionException, JobParametersInvalidException, JobRestartException {
+        jobOperator.restart(execId);
+    }
+
+    @PostMapping("/stop/{execId}")
+    public void stop(@PathVariable Long execId) throws JobInstanceAlreadyCompleteException, NoSuchJobException, NoSuchJobExecutionException, JobParametersInvalidException, JobRestartException, JobExecutionNotRunningException {
+        jobOperator.stop(execId);
+
+    }
+
+
+
+    @PostMapping("/reschedule")
+    public String rescheduleJob(@RequestParam String jobName, @RequestParam String cronExp) {
+        customSchedulerProcessor.reschedule(jobName, cronExp);
+        return "Reschedule request sent for job: " + jobName + " with cron: " + cronExp;
+    }
+
 }
