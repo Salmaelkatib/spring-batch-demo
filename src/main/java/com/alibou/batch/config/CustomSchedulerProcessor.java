@@ -1,5 +1,7 @@
 package com.alibou.batch.config;
 
+import lombok.Data;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -20,6 +22,7 @@ import java.util.concurrent.ScheduledFuture;
 @Slf4j
 @Component
 @EnableScheduling
+@Getter
 public class CustomSchedulerProcessor implements BeanPostProcessor, EmbeddedValueResolverAware {
 
     private final TaskScheduler taskScheduler;
@@ -115,5 +118,9 @@ public class CustomSchedulerProcessor implements BeanPostProcessor, EmbeddedValu
         cronExpressions.put(jobName, newCron);
 
         log.info("Rescheduled {} with new cron {}", jobName, newCron);
+    }
+
+    public String getCronForJob(String jobName) {
+        return cronExpressions.get(jobName);
     }
 }
