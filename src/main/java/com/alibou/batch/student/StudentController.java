@@ -1,25 +1,24 @@
 package com.alibou.batch.student;
 
 import com.alibou.batch.config.CustomSchedulerProcessor;
+import com.alibou.batch.registeration.JobRegistry;
+import com.alibou.batch.registeration.JobRegistryRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.JobParametersInvalidException;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.*;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cloud.context.refresh.ContextRefresher;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.ZonedDateTime;
 
 
 @RestController
-@RequestMapping("/students")
+@RequestMapping("/students/jobs/importStudents/")
 @RequiredArgsConstructor
 public class StudentController {
     private final JobLauncher jobLauncher;
@@ -28,20 +27,24 @@ public class StudentController {
     private final ContextRefresher contextRefresher;
     private final Job job;
     private final CustomSchedulerProcessor customSchedulerProcessor;
+    private final JobRegistryRepository jobRegistryRepository;
 
     @PostMapping("/start")
-    public void importCsvToDBJob() {
+    public ResponseEntity<String> importCsvToDBJob() {
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("startAt", System.currentTimeMillis())
                 .toJobParameters();
+        JobExecution jobExecution;
         try {
-            jobLauncher.run(job, jobParameters);
+            jobExecution = jobLauncher.run(job, jobParameters);
         } catch (JobExecutionAlreadyRunningException
                  | JobRestartException
                  | JobInstanceAlreadyCompleteException
                  | JobParametersInvalidException e) {
             e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Error running job: " + e.getMessage());
         }
+        return ResponseEntity.ok(""+jobExecution.getId());
     }
 
     @PostMapping("/restart/{execId}")
@@ -58,25 +61,11 @@ public class StudentController {
 
 
     @PostMapping("/reschedule")
-    public String rescheduleJob(@RequestParam String jobName, @RequestParam String cronExp) {
-        customSchedulerProcessor.reschedule(jobName, cronExp);
-        return "Reschedule request sent for job: " + jobName + " with cron: " + cronExp;
+    public String rescheduleJob(@RequestParam String cronExp) {
+        customSchedulerProcessor.reschedule("importStudents", cronExp);
+        JobRegistry jobRegistry = jobRegistryRepository.findByJobName("importStudents");
+        jobRegistry.setCronExpression(cronExp);
+        jobRegistryRepository.save(jobRegistry);
+        return "Reschedule request sent for job: " + "importStudents" + " with cron: " + cronExp;
     }
-
-    @PostMapping("/next-run")
-    public String getNextRun(@RequestParam String jobName) {
-        try {
-            String cronExp = customSchedulerProcessor.getCronForJob(jobName);
-            if (cronExp == null) {
-                return "No cron expression found for job: " + jobName;
-            }
-            CronExpression cron = CronExpression.parse(cronExp);
-            ZonedDateTime next = cron.next(ZonedDateTime.now());
-            return next != null ? next.toString() : "No next run time found";
-        } catch (Exception e) {
-            return "Error: " + e.getMessage();
-        }
-    }
-
-
 }

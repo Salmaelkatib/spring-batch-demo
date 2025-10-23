@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.data.RepositoryItemWriter;
@@ -14,11 +16,13 @@ import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
@@ -75,14 +79,7 @@ public class BatchConfig {
                 .build();
 
     }
-
-    @Bean
-    // to run step on parallel steps
-    public TaskExecutor taskExecutor() {
-        SimpleAsyncTaskExecutor asyncTaskExecutor = new SimpleAsyncTaskExecutor();
-        asyncTaskExecutor.setConcurrencyLimit(10); //max num of threads allowed
-        return asyncTaskExecutor;
-    }
+    
 
     // helps to transform each line read from the csv file to a Student object
     private LineMapper<Student> lineMapper() {
@@ -100,4 +97,28 @@ public class BatchConfig {
         lineMapper.setFieldSetMapper(fieldSetMapper);
         return lineMapper;
     }
+
+    @Bean
+    public TaskExecutor taskExecutor() {
+        // Async pool (tune for your workload). For blocking behavior, return new SyncTaskExecutor()
+        ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
+        exec.setCorePoolSize(4);
+        exec.setMaxPoolSize(8);
+        exec.setQueueCapacity(100);
+        exec.setThreadNamePrefix("batch-");
+        exec.initialize();
+        return exec;
+    }
+
+    @Bean
+    public JobLauncher jobLauncher(
+            JobRepository jobRepository,
+            @Qualifier("taskExecutor") TaskExecutor taskExecutor
+    ) {
+        var launcher = new TaskExecutorJobLauncher();
+        launcher.setJobRepository(jobRepository);
+        launcher.setTaskExecutor(taskExecutor); // async if ThreadPoolTaskExecutor; blocking if SyncTaskExecutor
+        return launcher;
+    }
+
 }
