@@ -19,7 +19,6 @@ public class RegistrationService {
 
     private final ServiceRegistryRepository serviceRegistryRepository;
     private final JobRegistryRepository jobRegistryRepository;
-    private final Environment environment;
 
     @Value("${spring.application.name}")
     private String serviceName;
@@ -79,16 +78,22 @@ public class RegistrationService {
 
     private void registerJobs(ServiceRegistry serviceRegistry) {
         // Here you would typically scan for jobs in your application
-        // For this example, we'll add a few placeholder jobs
-        String jobName = "importStudents";
-        String jobDescription = "Process student data";
-        String path = "/students/jobs/importStudents/";
+        // Job 1: Students
         registerJob(
-            serviceRegistry,
-            jobName,
-            jobDescription,
-            path,
-            cronExp
+                serviceRegistry,
+                "importStudents",
+                "Process student data",
+                "/demo/jobs/importStudents/",
+                cronExp
+        );
+
+        // Job 2: Teachers
+        registerJob(
+                serviceRegistry,
+                "importTeachers",
+                "Process teacher data",
+                "/demo/jobs/importTeachers/",
+                cronExp
         );
 
         // Register any other jobs your application has
@@ -103,10 +108,30 @@ public class RegistrationService {
         Map<String, JobRegistry> jobMap = existingJobs.stream()
                 .collect(Collectors.toMap(JobRegistry::getJobName, job -> job));
 
-        String jobName = "importStudents";
-        String jobDescription = "Process student data";
-        String path = "/students/jobs/importStudents/";
-        // Update student job
+        // Job 1: Students
+        updateOrRegisterJob(jobMap, serviceRegistry,
+                "importStudents",
+                "Process student data",
+                "/demo/jobs/importStudents/",
+                cronExp);
+
+        // Job 2: Teachers
+        updateOrRegisterJob(jobMap, serviceRegistry,
+                "importTeachers",
+                "Process teacher data",
+                "/demo/jobs/importTeachers/",
+                cronExp);
+
+        // Update other jobs as needed
+    }
+
+    private void updateOrRegisterJob(Map<String, JobRegistry> jobMap,
+                                     ServiceRegistry serviceRegistry,
+                                     String jobName,
+                                     String jobDescription,
+                                     String path,
+                                     String cronExp) {
+        // Update job
         if (jobMap.containsKey(jobName)) {
             JobRegistry job = jobMap.get(jobName);
             job.setJobDescription(jobDescription);
@@ -117,15 +142,13 @@ public class RegistrationService {
             log.info("Updated job: {}", job.getJobName());
         } else {
             registerJob(
-                serviceRegistry, 
-                jobName,
-                jobDescription,
-                path,
-                cronExp
+                    serviceRegistry,
+                    jobName,
+                    jobDescription,
+                    path,
+                    cronExp
             );
         }
-
-        // Update other jobs as needed
     }
 
     private void registerJob(
