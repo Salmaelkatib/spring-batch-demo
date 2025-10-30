@@ -5,6 +5,9 @@ import com.alibou.batch.student.StudentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.JobRegistry;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.configuration.support.JobRegistryBeanPostProcessor;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
@@ -34,6 +37,7 @@ public class BatchConfig {
     private final StudentRepository repository;
 
     @Bean
+    @StepScope
     // reads lines from a csv file and maps lines to a Student object
     public FlatFileItemReader<Student> reader() {
         FlatFileItemReader<Student> itemReader = new FlatFileItemReader<>();
@@ -45,6 +49,7 @@ public class BatchConfig {
     }
 
     @Bean
+    @StepScope
     // uses custom processor
     public StudentProcessor processor() {
         return new StudentProcessor();
@@ -56,6 +61,7 @@ public class BatchConfig {
         RepositoryItemWriter<Student> writer = new RepositoryItemWriter<>();
         writer.setRepository(repository);
         writer.setMethodName("save");
+
         return writer;
     }
 
@@ -63,16 +69,20 @@ public class BatchConfig {
     // define the cvsImport step
     public Step step1() {
         return new StepBuilder("csvImport", jobRepository)
-                .<Student, Student>chunk(1000, platformTransactionManager)
+                .<Student, Student>chunk(100, platformTransactionManager)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
-                .taskExecutor(taskExecutor())
+                .taskExecutor(threadPoolTaskExecutor())
                 .build();
     }
-
     @Bean
-    // declares the job name ,steps and their order.
+    public JobRegistryBeanPostProcessor jobRegistryBeanPostProcessor(JobRegistry jobRegistry) {
+        JobRegistryBeanPostProcessor postProcessor = new JobRegistryBeanPostProcessor();
+        postProcessor.setJobRegistry(jobRegistry);
+        return postProcessor;
+    }
+    @Bean(name = "importStudents")    // declares the job name ,steps and their order.
     public Job runJob() {
         return new JobBuilder("importStudents", jobRepository)
                 .start(step1())
@@ -95,11 +105,12 @@ public class BatchConfig {
 
         lineMapper.setLineTokenizer(lineTokenizer);
         lineMapper.setFieldSetMapper(fieldSetMapper);
+
         return lineMapper;
     }
 
     @Bean
-    public TaskExecutor taskExecutor() {
+    public ThreadPoolTaskExecutor threadPoolTaskExecutor() {
         // Async pool (tune for your workload). For blocking behavior, return new SyncTaskExecutor()
         ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
         exec.setCorePoolSize(4);
@@ -113,11 +124,11 @@ public class BatchConfig {
     @Bean
     public JobLauncher jobLauncher(
             JobRepository jobRepository,
-            @Qualifier("taskExecutor") TaskExecutor taskExecutor
+            ThreadPoolTaskExecutor threadPoolTaskExecutor
     ) {
         var launcher = new TaskExecutorJobLauncher();
         launcher.setJobRepository(jobRepository);
-        launcher.setTaskExecutor(taskExecutor); // async if ThreadPoolTaskExecutor; blocking if SyncTaskExecutor
+        launcher.setTaskExecutor(threadPoolTaskExecutor); // async if ThreadPoolTaskExecutor; blocking if SyncTaskExecutor
         return launcher;
     }
 

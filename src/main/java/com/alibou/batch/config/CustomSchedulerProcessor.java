@@ -120,7 +120,4 @@ public class CustomSchedulerProcessor implements BeanPostProcessor, EmbeddedValu
         log.info("Rescheduled {} with new cron {}", jobName, newCron);
     }
 
-    public String getCronForJob(String jobName) {
-        return cronExpressions.get(jobName);
-    }
 }

@@ -91,6 +91,7 @@ public class RegistrationService {
             cronExp
         );
 
+
         // Register any other jobs your application has
         // You could use ApplicationContext to scan for beans with @CustomScheduled
     }

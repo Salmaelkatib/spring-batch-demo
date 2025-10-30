@@ -10,6 +10,7 @@ import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.repository.JobExecutionAlreadyRunningException;
 import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteException;
 import org.springframework.batch.core.repository.JobRestartException;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 
@@ -18,12 +19,10 @@ import org.springframework.stereotype.Component;
 public class StudentScheduler {
     private final JobLauncher jobLauncher;
     private final Job job;
-    private static int x = 0;
 
 
     @CustomScheduled(cronExp = "${cronExp}", jobName = "importStudents")
     public void execute() {
-        System.out.println(x++);
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("startAt", System.currentTimeMillis())
                 .toJobParameters();
