@@ -1,4 +1,4 @@
-package com.alibou.batch.teacher;
+package cash.batch.teacher;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

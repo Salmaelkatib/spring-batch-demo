@@ -1,4 +1,4 @@
-package com.alibou.batch.registeration;
+package cash.batch.registeration;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

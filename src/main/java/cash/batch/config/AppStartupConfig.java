@@ -1,6 +1,6 @@
-package com.alibou.batch.config;
+package cash.batch.config;
 
-import com.alibou.batch.registeration.RegistrationService;
+import cash.batch.registeration.RegistrationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;

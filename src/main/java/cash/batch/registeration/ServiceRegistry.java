@@ -1,4 +1,4 @@
-package com.alibou.batch.registeration;
+package cash.batch.registeration;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;

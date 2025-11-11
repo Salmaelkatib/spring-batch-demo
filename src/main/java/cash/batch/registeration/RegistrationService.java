@@ -1,12 +1,10 @@
-package com.alibou.batch.registeration;
+package cash.batch.registeration;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
-import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;

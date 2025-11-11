@@ -1,12 +1,14 @@
-package com.alibou.batch.config;
+package cash.batch.config;
 
-import com.alibou.batch.student.Student;
-import com.alibou.batch.student.StudentRepository;
-import com.alibou.batch.teacher.Teacher;
-import com.alibou.batch.teacher.TeacherRepository;
+import cash.batch.student.Student;
+import cash.batch.student.StudentRepository;
+import cash.batch.teacher.Teacher;
+import cash.batch.teacher.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.JobRegistry;
+import org.springframework.batch.core.configuration.support.JobRegistryBeanPostProcessor;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.TaskExecutorJobLauncher;
@@ -83,11 +85,10 @@ public class BatchConfig {
     // define the cvsImport step
     public Step StudentCsvImport() {
         return new StepBuilder("StudentCsvImport", jobRepository)
-                .<Student, Student>chunk(1000, platformTransactionManager)
+                .<Student, Student>chunk(100, platformTransactionManager)
                 .reader(studentReader())
                 .processor(processor())
                 .writer(studentWriter())
-                .taskExecutor(taskExecutor())
                 .build();
     }
 
@@ -95,11 +96,13 @@ public class BatchConfig {
     // define the cvsImport step
     public Step TeacherCsvImport() {
         return new StepBuilder("TeacherCsvImport", jobRepository)
-                .<Teacher, Teacher>chunk(1000, platformTransactionManager)
+                .<Teacher, Teacher>chunk(100, platformTransactionManager)
                 .reader(teacherReader())
-                .processor(item -> item)
+                .processor(item -> {
+                    item.setId(null);
+                    return item;
+                })
                 .writer(teacherWriter())
-                .taskExecutor(taskExecutor())
                 .build();
     }
 
@@ -153,7 +156,7 @@ public class BatchConfig {
         return lineMapper;
     }
 
-    @Bean
+    @Bean // must be imported
     public TaskExecutor taskExecutor() {
         // Async pool (tune for your workload). For blocking behavior, return new SyncTaskExecutor()
         ThreadPoolTaskExecutor exec = new ThreadPoolTaskExecutor();
@@ -165,7 +168,7 @@ public class BatchConfig {
         return exec;
     }
 
-    @Bean
+    @Bean // must be imported
     public JobLauncher jobLauncher(
             JobRepository jobRepository,
             @Qualifier("taskExecutor") TaskExecutor taskExecutor
@@ -176,5 +179,10 @@ public class BatchConfig {
         return launcher;
     }
 
-
+    @Bean // must be imported
+    public JobRegistryBeanPostProcessor jobRegistryBeanPostProcessor(JobRegistry jobRegistry) {
+        JobRegistryBeanPostProcessor processor = new JobRegistryBeanPostProcessor();
+        processor.setJobRegistry(jobRegistry);
+        return processor;
+    }
 }
