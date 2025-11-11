@@ -23,7 +23,6 @@ public class TeacherScheduler {
         this.jobLauncher = jobLauncher;
         this.job = job;
     }
-
     @CustomScheduled(cronExp = "${cronExp}", jobName = "importTeachers")
     public void execute() {
         JobParameters jobParameters = new JobParametersBuilder()

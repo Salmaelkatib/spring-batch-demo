@@ -17,16 +17,15 @@ import org.springframework.stereotype.Component;
 public class StudentScheduler {
     private final JobLauncher jobLauncher;
     private final Job job;
-    private static int x = 0;
 
     public StudentScheduler(JobLauncher jobLauncher, @Qualifier("importStudents") Job job) {
         this.jobLauncher = jobLauncher;
         this.job = job;
     }
 
-    @CustomScheduled(cronExp = "${cronExp}", jobName = "importTeachers")
+
+    @CustomScheduled(cronExp = "${cronExp}", jobName = "importStudents")
     public void execute() {
-        System.out.println(x++);
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("startAt", System.currentTimeMillis())
                 .toJobParameters();
