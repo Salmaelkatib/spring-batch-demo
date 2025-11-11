@@ -1,9 +1,9 @@
-package com.alibou.batch.config;
+package cash.batch.config;
 
-import com.alibou.batch.student.Student;
-import com.alibou.batch.student.StudentRepository;
-import com.alibou.batch.teacher.Teacher;
-import com.alibou.batch.teacher.TeacherRepository;
+import cash.batch.student.Student;
+import cash.batch.student.StudentRepository;
+import cash.batch.teacher.Teacher;
+import cash.batch.teacher.TeacherRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;

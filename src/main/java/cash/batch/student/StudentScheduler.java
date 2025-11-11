@@ -1,7 +1,6 @@
-package com.alibou.batch.teacher;
+package cash.batch.student;
 
-import com.alibou.batch.config.CustomScheduled;
-import lombok.RequiredArgsConstructor;
+import cash.jobscheduler.CustomScheduled;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
@@ -15,18 +14,19 @@ import org.springframework.stereotype.Component;
 
 
 @Component
-public class TeacherScheduler {
+public class StudentScheduler {
     private final JobLauncher jobLauncher;
     private final Job job;
     private static int x = 0;
 
-    public TeacherScheduler(JobLauncher jobLauncher, @Qualifier("importTeachers") Job job) {
+    public StudentScheduler(JobLauncher jobLauncher, @Qualifier("importStudents") Job job) {
         this.jobLauncher = jobLauncher;
         this.job = job;
     }
 
     @CustomScheduled(cronExp = "${cronExp}", jobName = "importTeachers")
     public void execute() {
+        System.out.println(x++);
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("startAt", System.currentTimeMillis())
                 .toJobParameters();

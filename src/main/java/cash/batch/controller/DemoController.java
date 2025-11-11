@@ -1,8 +1,7 @@
-package com.alibou.batch.controller;
+package cash.batch.controller;
 
-import com.alibou.batch.config.CustomSchedulerProcessor;
-import com.alibou.batch.registeration.JobRegistry;
-import com.alibou.batch.registeration.JobRegistryRepository;
+import cash.batch.registeration.JobRegistryRepository;
+import cash.jobscheduler.CustomSchedulerProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.JobLocator;
@@ -88,12 +87,6 @@ public class DemoController {
     @PostMapping("{jobName}/reschedule")
     public String rescheduleJob(@PathVariable String jobName , @RequestParam String cronExp) {
         customSchedulerProcessor.reschedule(jobName, cronExp);
-        JobRegistry jobRegistry = jobRegistryRepository.findByJobName(jobName);
-        if (jobRegistry == null) {
-            throw new RuntimeException("Job not found: " + jobName);
-        }
-        jobRegistry.setCronExpression(cronExp);
-        jobRegistryRepository.save(jobRegistry);
         return "Reschedule request sent for job: " + jobName + " with cron: " + cronExp;
     }
 }

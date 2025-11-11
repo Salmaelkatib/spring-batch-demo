@@ -1,4 +1,4 @@
-package com.alibou.batch;
+package cash.batch;
 
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.boot.SpringApplication;
