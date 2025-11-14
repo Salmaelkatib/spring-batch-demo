@@ -3,6 +3,7 @@ package cash.batch.exception;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -46,8 +47,20 @@ public class ControllerExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseBody);
     }
 
+
+    @ExceptionHandler(NoSuchBeanDefinitionException.class)
+    ResponseEntity<ErrorResponseBody> noSuchBeanDefinitionException(Exception e) {
+        ErrorResponseBody responseBody = ErrorResponseBody
+                .builder()
+                .timeStamp(new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()))
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(e.getMessage())
+                .build();
+        return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseBody);
+    }
+
     @ExceptionHandler(Exception.class)
-    ResponseEntity<ErrorResponseBody> handleNoSuchBeanDefinitionException(Exception e) {
+    ResponseEntity<ErrorResponseBody> exception(Exception e) {
         ErrorResponseBody responseBody = ErrorResponseBody
                 .builder()
                 .timeStamp(new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new Date()))
