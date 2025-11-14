@@ -3,26 +3,27 @@ package cash.batch.registeration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RegistrationService {
 
-    private final ServiceRegistryRepository serviceRegistryRepository;
-    private final JobRegistryRepository jobRegistryRepository;
+    private final RestTemplate restTemplate;
+
+    @Value("${orchestrator.registration.url}")
+    private String serviceRegistrationUrl;
 
     @Value("${spring.application.name}")
     private String serviceName;
 
     @Value("${server.port}")
-    private String serverPort;
+    private int serverPort;
 
     @Value("${service.description}")
     private String serviceDescription;
@@ -32,141 +33,51 @@ public class RegistrationService {
 
     public void registerService() {
         try {
-            // Get local host information
-            //String hostAddress = InetAddress.getLocalHost().getHostAddress();
-            String hostAddress = "localhost";
+            ServiceDTO body = getRegisterServiceDTO();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            // Check if service already exists
-            ServiceRegistry existingService = serviceRegistryRepository.findByServiceName(serviceName);
+            HttpEntity<ServiceDTO> requestEntity = new HttpEntity<>(body, headers);
 
-            if (existingService != null) {
-                log.info("Service '{}' already exists, updating...", serviceName);
-
-                // Update existing service
-                existingService.setLastUpdated(new Date());
-                existingService.setIp(hostAddress);
-                existingService.setPort(serverPort);
-                existingService.setServiceDescription(serviceDescription);
-
-                serviceRegistryRepository.save(existingService);
-                log.info("Service '{}' updated successfully", serviceName);
-
-                // Update existing jobs
-                updateExistingJobs(existingService);
-            } else {
-                // Create new service
-                ServiceRegistry newService = new ServiceRegistry();
-                newService.setServiceName(serviceName);
-                newService.setIp(hostAddress);
-                newService.setPort(serverPort);
-                newService.setServiceDescription(serviceDescription);
-                newService.setCreateTime(new Date());
-                newService.setLastUpdated(new Date());
-
-                newService = serviceRegistryRepository.save(newService);
-                log.info("Service '{}' registered successfully", serviceName);
-
-                // Register jobs for new service
-                registerJobs(newService);
-            }
+            // Send request
+            ResponseEntity<String> response = restTemplate.exchange(
+                    serviceRegistrationUrl,
+                    HttpMethod.POST,
+                    requestEntity,
+                    String.class
+            );
+            log.info("Service registration response: {}", response.getBody());
         } catch (Exception e) {
             log.error("Error registering service: {}", e.getMessage(), e);
         }
     }
 
-    private void registerJobs(ServiceRegistry serviceRegistry) {
-        // Here you would typically scan for jobs in your application
-        // Job 1: Students
-        registerJob(
-                serviceRegistry,
-                "importStudents",
-                "Process student data",
-                "/demo/jobs/importStudents/",
-                cronExp
+    private ServiceDTO getRegisterServiceDTO() {
+        String hostAddress = "localhost";
+
+        // jobs list
+        List<JobDTO> jobs = List.of(
+                new JobDTO(
+                        "importStudents",
+                        "Process student data",
+                        "/demo/jobs/importStudents/",
+                        cronExp
+                ),
+                new JobDTO(
+                        "importTeachers",
+                        "Process teacher data",
+                        "/demo/jobs/importTeachers/",
+                        cronExp
+                )
         );
 
-        // Job 2: Teachers
-        registerJob(
-                serviceRegistry,
-                "importTeachers",
-                "Process teacher data",
-                "/demo/jobs/importTeachers/",
-                cronExp
+        // Build request body
+        return new ServiceDTO(
+                serviceName,
+                serviceDescription,
+                hostAddress,
+                serverPort,
+                jobs
         );
-
-
-        // Register any other jobs your application has
-        // You could use ApplicationContext to scan for beans with @CustomScheduled
-    }
-
-    private void updateExistingJobs(ServiceRegistry serviceRegistry) {
-        // Get all jobs associated with this service
-        List<JobRegistry> existingJobs = jobRegistryRepository.findByServiceRegistry(serviceRegistry);
-
-        // Update existing jobs and register new ones
-        Map<String, JobRegistry> jobMap = existingJobs.stream()
-                .collect(Collectors.toMap(JobRegistry::getJobName, job -> job));
-
-        // Job 1: Students
-        updateOrRegisterJob(jobMap, serviceRegistry,
-                "importStudents",
-                "Process student data",
-                "/demo/jobs/importStudents/",
-                cronExp);
-
-        // Job 2: Teachers
-        updateOrRegisterJob(jobMap, serviceRegistry,
-                "importTeachers",
-                "Process teacher data",
-                "/demo/jobs/importTeachers/",
-                cronExp);
-
-        // Update other jobs as needed
-    }
-
-    private void updateOrRegisterJob(Map<String, JobRegistry> jobMap,
-                                     ServiceRegistry serviceRegistry,
-                                     String jobName,
-                                     String jobDescription,
-                                     String path,
-                                     String cronExp) {
-        // Update job
-        if (jobMap.containsKey(jobName)) {
-            JobRegistry job = jobMap.get(jobName);
-            job.setJobDescription(jobDescription);
-            job.setPath(path);
-            job.setCronExpression(cronExp);
-            job.setLastUpdated(new Date());
-            jobRegistryRepository.save(job);
-            log.info("Updated job: {}", job.getJobName());
-        } else {
-            registerJob(
-                    serviceRegistry,
-                    jobName,
-                    jobDescription,
-                    path,
-                    cronExp
-            );
-        }
-    }
-
-    private void registerJob(
-            ServiceRegistry serviceRegistry,
-            String jobName,
-            String jobDescription,
-            String path,
-            String cronExpression) {
-
-        JobRegistry job = new JobRegistry();
-        job.setJobName(jobName);
-        job.setJobDescription(jobDescription);
-        job.setPath(path);
-        job.setCronExpression(cronExpression);
-        job.setCreateTime(new Date());
-        job.setLastUpdated(new Date());
-        job.setServiceRegistry(serviceRegistry);
-
-        jobRegistryRepository.save(job);
-        log.info("Registered job: {}", jobName);
     }
 }

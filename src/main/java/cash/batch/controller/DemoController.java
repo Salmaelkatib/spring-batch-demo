@@ -1,8 +1,6 @@
 package cash.batch.controller;
 
 import cash.jobscheduler.CustomSchedulerProcessor;
-import cash.batch.registeration.JobRegistry;
-import cash.batch.registeration.JobRegistryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.explore.JobExplorer;
@@ -12,6 +10,7 @@ import org.springframework.batch.core.repository.JobInstanceAlreadyCompleteExcep
 import org.springframework.batch.core.repository.JobRestartException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,11 +23,10 @@ public class DemoController {
     private final JobOperator jobOperator;
     private final ApplicationContext applicationContext;
     private final CustomSchedulerProcessor customSchedulerProcessor;
-    private final JobRegistryRepository jobRegistryRepository;
     private final JobExplorer jobExplorer;
 
     @PostMapping("{jobName}/start")
-    public ResponseEntity<String> startJob(@PathVariable String jobName) throws JobExecutionAlreadyRunningException, JobInstanceAlreadyCompleteException, JobParametersInvalidException {
+    public ResponseEntity<String> startJob(@PathVariable String jobName) {
         try {
             Job job = (Job) applicationContext.getBean(jobName);
             JobParameters jobParameters = new JobParametersBuilder()
@@ -38,15 +36,16 @@ public class DemoController {
             JobExecution jobExecution = jobLauncher.run(job, jobParameters);
             return ResponseEntity.ok("Job " + jobName + " started successfully with ID: " + jobExecution.getId());
         } catch (NoSuchBeanDefinitionException e) {
-            throw new NoSuchBeanDefinitionException("Job Bean not found: " + jobName);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Job Bean not found: " + jobName);
         } catch (JobExecutionAlreadyRunningException e) {
-            throw new JobExecutionAlreadyRunningException("Job " + jobName + " is already running.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Job " + jobName + " is already running.");
         } catch (JobInstanceAlreadyCompleteException e) {
-            throw new JobInstanceAlreadyCompleteException("Job " + jobName + " has already completed.");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Job " + jobName + " has already completed.");
         } catch (JobRestartException | JobParametersInvalidException e) {
-            throw new JobParametersInvalidException("Cannot start job: " + jobName +" invalid parameters.");
+            return ResponseEntity.badRequest().body("Cannot start job: " + jobName +" invalid parameters.");
         } catch (Exception e) {
-            throw new RuntimeException("Unexpected error while starting job: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body("Unexpected error while starting job: " + e.getMessage());
         }
     }
 
@@ -71,13 +70,6 @@ public class DemoController {
     }
     @PostMapping("{jobName}/reschedule")
     public ResponseEntity<String> rescheduleJob(@PathVariable String jobName , @RequestParam String cronExp) {
-        JobRegistry jobRegistry = jobRegistryRepository.findByJobName(jobName);
-        if (jobRegistry == null) {
-            throw new RuntimeException("Job not found: " + jobName);
-        }
         customSchedulerProcessor.reschedule(jobName, cronExp);
-        jobRegistry.setCronExpression(cronExp);
-        jobRegistryRepository.save(jobRegistry);
-        return ResponseEntity.ok("Job " + jobName + "rescheduled successfully with new cron Exp: " + cronExp);
-    }
+        return ResponseEntity.ok("Job " + jobName + "rescheduled successfully with new cron Exp: " + cronExp);    }
 }
