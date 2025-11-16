@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -28,8 +30,10 @@ public class RegistrationService {
     @Value("${service.description}")
     private String serviceDescription;
 
-    @Value("${cronExp}")
-    private String cronExp;
+    @Value("${cron.expression.students}")
+    private String cronExpStudents;
+    @Value("${cron.expression.teachers}")
+    private String cronExpTeachers;
 
     public void registerService() {
         try {
@@ -47,8 +51,14 @@ public class RegistrationService {
                     String.class
             );
             log.info("Service registration response: {}", response.getBody());
-        } catch (Exception e) {
-            log.error("Error registering service: {}", e.getMessage(), e);
+        }catch (HttpClientErrorException e) {
+            log.info("Service registration failed: {}", e.getResponseBodyAsString());
+        }
+        catch (RestClientException e){
+            log.error("Error registering service", e.getMessage());
+        }
+        catch (Exception e) {
+            log.error("Error registering service: {}", e.getMessage());
         }
     }
 
@@ -60,24 +70,23 @@ public class RegistrationService {
                 new JobDTO(
                         "importStudents",
                         "Process student data",
-                        "/demo/jobs/importStudents/",
-                        cronExp
+                        cronExpStudents
                 ),
                 new JobDTO(
                         "importTeachers",
                         "Process teacher data",
-                        "/demo/jobs/importTeachers/",
-                        cronExp
+                        cronExpTeachers
                 )
         );
 
         // Build request body
-        return new ServiceDTO(
-                serviceName,
-                serviceDescription,
-                hostAddress,
-                serverPort,
-                jobs
-        );
+        return new ServiceDTO.ServiceDTOBuilder()
+                .serviceName(serviceName)
+                .ip(hostAddress)
+                .serviceDescription(serviceDescription)
+                .path("/" + serviceName + "/jobs/")
+                .jobs(jobs)
+                .port(serverPort)
+                .build();
     }
 }

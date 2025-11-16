@@ -12,6 +12,5 @@ import lombok.ToString;
 public class JobDTO {
     private String jobName;
     private String jobDescription;
-    private String path;  //to trigger a job
     private String cronExpression;
 }

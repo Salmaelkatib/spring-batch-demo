@@ -24,7 +24,7 @@ public class StudentScheduler {
     }
 
 
-    @CustomScheduled(cronExp = "${cronExp}", jobName = "importStudents")
+    @CustomScheduled(cronExp = "${cron.expression.students}", jobName = "importStudents")
     public void execute() {
         JobParameters jobParameters = new JobParametersBuilder()
                 .addLong("startAt", System.currentTimeMillis())
